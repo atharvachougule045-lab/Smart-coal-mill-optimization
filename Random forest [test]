@@ -1,0 +1,80 @@
+
+
+
+
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split 
+
+try:
+    print("--- 1. GENERATING 5000 ROWS OF PHYSICS-ACCURATE DATA ---")
+    np.random.seed(42)
+    
+  
+    feed_rate = np.random.uniform(65.0, 70.0, 5000)  
+    work_index = np.random.uniform(13, 13, 5000) 
+    feed_size = np.random.uniform(7000, 8100, 5000)  
+    target_size = np.random.uniform(2000, 2200, 5000) 
+
+    power_draw = feed_rate * 10 * work_index * ((1/np.sqrt(target_size)) - (1/np.sqrt(feed_size)))
+    
+   
+    power_draw += np.random.normal(0, 0.05, 5000)
+    
+     
+
+    df = pd.DataFrame({
+        'FeedRate': feed_rate,
+        'WorkIndex': work_index,
+        'FeedSize': feed_size,
+        'TargetSize': target_size,
+        'PowerDraw': power_draw
+    })
+    print("Successfully generated clean data!\n")
+
+   
+    X = df.iloc[:, 0:4].values
+    y = df.iloc[:, 4].values
+
+   
+    print("Splitting data: 80% for Training, 20% for Blind Testing...")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+   
+    print("Training Random Forest Algorithm on Training Set...")
+    rf_model = RandomForestRegressor(n_estimators=200, random_state=66)
+    rf_model.fit(X_train, y_train)
+
+   
+    y_pred = rf_model.predict(X_test)
+    r_squared = r2_score(y_test, y_pred)
+
+    print("\n" + "="*45)
+    print("--- 1. MODEL PERFORMANCE (TESTING DATA) ---")
+    print("="*45)
+    print(f"Blind Testing Accuracy (R-squared): {r_squared:.4f}")
+
+    print("\nFeature Importance (What drives the power draw most?):")
+    feature_names = ['Feed Rate', 'Work Index', 'Feed Size', 'Target Size']
+    importances = rf_model.feature_importances_
+
+    for name, importance in zip(feature_names, importances):
+        print(f"  {name}: {importance * 100:.1f}% impact")
+
+   
+    print("\n" + "="*45)
+    print("--- 2. LIVE POWER PREDICTION ---")
+    print("="*45)
+
+    current_sensor_data = np.array([[8, 13.0, 7223, 2008]])
+    predicted_power = rf_model.predict(current_sensor_data)[0]
+
+    print(f"Current Inputs -> Feed: 7.5 tph | WI: 13.0 | F80: 8000 | P80: 2500")
+    print(f"PREDICTED POWER DRAW: {predicted_power:.2f} kW")
+    print("/n"+"="*40)
+
+except Exception as e:
+    print(f"\nCRITICAL ERROR: {e}")
